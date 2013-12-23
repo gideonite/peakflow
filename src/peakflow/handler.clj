@@ -68,14 +68,17 @@
 
 (defroutes app-routes
   (GET "/" [] (response/file-response "resources/public/landing.html"))
-  (GET "/foobar" [] "FOOBAR")
+  (GET "/foobar" [] "FOOBAR") ;; TODO fix this response to be a response and not a string.
   (GET "/signup" [] (response/file-response "resources/public/signup.html"))
   (POST "/signup" [username]
         "NICE TRY BUCKO!")
   (POST "/auth" [username password]
         (if-let [user-id (authorize db username password)]
-          (-> (redirect "/foobar")
-              (assoc :session {:session-id user-id}))
+          (do
+            (println (-> (redirect "/foobar")
+                       (assoc :session {:session-id user-id})))
+            (-> (redirect "/foobar")
+              (assoc :session {:session-id user-id}))) 
           "You don't exist. Sorry."))
   (route/not-found "Not Found"))
 
