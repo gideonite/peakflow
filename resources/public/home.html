@@ -1,7 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>PEAKFLOW</title>
+<title>PEAKFLOW HOME</title>
+
 <!--
 <link rel="stylesheet" type="text/css" href="FIXME" />
 <script type="text/javascript" src="FIXME"></script>
@@ -10,17 +11,78 @@
 /* ]]> */
 </style>
 -->
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script>
+
 </head>
 <body>
-
     <p>Welcome back friend of Gideon. Care to peakflow?</p>
 
-    <form action="home/data" method="POST">
-        Peakflow: <input type="text" name="peakflow"> <br />
+    <form id="peakflow-form">
+        Peakflow: <input id="new-peakflow-input" type="text" name="peakflow"> <br />
         <br />
         <input type="submit" value="submit">
         <br />
     </form>
 
+    <table id="peakflows"></table>
 </body>
+
+<script type="text/javascript">
+    $("#peakflow-form").submit(function(e) {
+        e.preventDefault();
+
+        // dead stupid validation
+        // basically validation by `parseInt`
+        var new_peakflow = parseInt($('#new-peakflow-input').val())
+        if (isNaN(new_peakflow)) {
+            alert("Peakflow must be a number!")
+            return;
+        }
+
+        var timestamp = (new Date(e.timeStamp)).toISOString();
+        var formdata = $(this).serialize();
+        formdata += "&timestamp=" + timestamp;
+        $.post("/home/data", formdata, function(data) {
+            console.log(data);
+            return data;
+        });
+    });
+
+    $(document).ready(function() {
+        $.get("/home/data", function(data) {
+            table(document.getElementById('peakflows'), data);
+        });
+    });
+
+    function table(el, data) {
+        if (data === "")
+            return;
+
+        $el = $(el);
+
+        $el.empty();
+
+        $el.attr("cellspacing", 10);
+
+        // table header
+        $header = $('<tr>');
+        $th_peakflow = $('<th>').text("Peakflow");
+        $th_time = $('<th>').text("Date");
+        $header.append($th_time);
+        $header.append($th_peakflow);
+        $el.append($header);
+
+        // populate the table with data
+        data.forEach(function(d,i) {
+            var time = new Date(d.timestamp);
+            $tr = $('<tr>');
+            $tr.append($('<td>').text(time.toDateString()));
+            $tr.append($('<td>').text(d.peakflow)).attr("align", "center");
+
+            $el.append($tr);
+        });
+    };
+
+</script>
 </html>
