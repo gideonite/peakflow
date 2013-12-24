@@ -2,11 +2,12 @@
   (:require [compojure.core :refer :all]
             [compojure.handler :as handler]
             [compojure.route :as route]
-            [noir.util.crypt :refer [encrypt gen-salt]]
-            [ring.util.response :as response :refer [redirect]]))
+            [noir.util.crypt :refer [encrypt]]
+            [ring.middleware.session :refer [wrap-session]]
+            [ring.util.response :refer [file-response redirect response]]))
 
 (defprotocol IDatabase
-  (authorize [this username password])
+  (authorize [this username password] [this user-id])
   (save-user! [this username password])
   (delete-user! [this username])
   (datum! [this username peakflow])
@@ -51,36 +52,45 @@
   )
 
 (deftype FileDB
-  [users-kvstore peakflows-kvstore]
+  [users peakflows]
   IDatabase
   (authorize [this username password]
-    (if-let [user (get-datum users-kvstore username)]
+    (if-let [user (get-datum users username)]
       (if (= (user :salty-password)
              (encrypt (user :salt) password))
         (:salty-username user))
-      nil)))
+      nil))
+  (authorize [this user-id]
+    (get-datum users user-id)))
 
-;; {:username :salty-password :salt :user-id}
+;; {:username :salty-password :salt :salty-username}
 (def users (KVFileStore. "db/users"))
-
 (def peakflows (KVFileStore. "db/peakflows"))
 (def db (FileDB. users peakflows))
 
+(defn handler
+  [request]
+  (let [authorized? (get-datum users ((request :session) :user-id))]
+    (if authorized?
+      (response "You must be a friend.")
+      (response "Get outa here."))))
+
 (defroutes app-routes
-  (GET "/" [] (response/file-response "resources/public/landing.html"))
-  (GET "/foobar" [] "FOOBAR") ;; TODO fix this response to be a response and not a string.
-  (GET "/signup" [] (response/file-response "resources/public/signup.html"))
+  (GET "/" [] (file-response "resources/public/landing.html"))
+  (GET "/foobar" {session :session}
+       (if (get-datum users (session :user-id))
+         (-> (response "You must be a friend.")
+           (assoc :session session))
+         (response "Get outa here.")))
+  (GET "/signup" [] (file-response "resources/public/signup.html"))
   (POST "/signup" [username]
-        "NICE TRY BUCKO!")
+        (response "NICE TRY BUCKO!"))
   (POST "/auth" [username password]
         (if-let [user-id (authorize db username password)]
-          (do
-            (println (-> (redirect "/foobar")
-                       (assoc :session {:session-id user-id})))
-            (-> (redirect "/foobar")
-              (assoc :session {:session-id user-id}))) 
+          (-> (redirect "/foobar")
+            (assoc :session {:user-id user-id}))
           "You don't exist. Sorry."))
   (route/not-found "Not Found"))
 
 (def app
-  (handler/site app-routes))
+  (handler/site app-routes [{:session handler}]))
