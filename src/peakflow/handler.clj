@@ -35,22 +35,6 @@
     (let [data (slurp-edn filename)]
       (get data key))))
 
-(comment
-  (get-datum (UserFileStore. "db/users.edn") :Gideon)
-  (assoc-datum! (UserFileStore. "db/users.edn") :Gideon {:user :NOTGIDEON :pswd :is :attr :cool}))
-
-(comment
-  (def salt "$2a$10$hsHJUanslb0LVSc3kRL.8OBVoYp/RHzvVPo9tSPyiHT/ZLYn0aXuS")
-
-  ;; user-salted
-  (encrypt salt "gideon@foo.bar")
-  "$2a$10$hsHJUanslb0LVSc3kRL.8OJeyyO2sbRafkih.rewWVRzoG8oDptee"
-
-  ;; password
-  (encrypt salt "foobar")
-  "$2a$10$hsHJUanslb0LVSc3kRL.8OXXfVSfooC4PqG0ICZA/HN/0nzKGTxjG"
-  )
-
 (deftype FileDB
   [users peakflows]
   IDatabase
@@ -71,22 +55,29 @@
     (get-datum peakflows (user :username))))
 
 (def users (KVFileStore. "db/users"))             ;; {:username :salty-password :salt :salty-username}
-(def peakflows (KVFileStore. "db/peakflows"))     ;; {:username (seq of {:peakflow number :timestamp :location})}
+(def peakflows (KVFileStore. "db/peakflows"))     ;; {:username (seq of {:peakflow :timestamp :location})}
 (def db (FileDB. users peakflows))
+
+(defn authorize-session
+  [session]
+  (authorize db (session :user-id)))
+
+(defn wrap-session
+  [response session]
+  (-> response (assoc :session session)))
 
 (defroutes app-routes
   (GET "/" [] (file-response "resources/public/landing.html"))
   (GET "/home" {session :session}
-       (if (authorize db (session :user-id))
-         (-> (file-response "resources/public/home.html")
-           (assoc :session session))
+       (if (authorize-session session)
+         (wrap-session (file-response "resources/public/home.html") session)
          (response "Get outa here.")))
   (POST "/home/data" {session :session params :params}
-        (if-let [user (authorize db (session :user-id))]
+        (if-let [user (authorize-session session)]
           (wrap-json-response (fn [req] (response (save-peakflow! db user (select-keys params [:peakflow])))))
           (response (str "Get outa here. You are not authorized for this action."))))
   (GET "/home/data" {session :session params :params}
-        (if-let [user (authorize db (session :user-id))]
+        (if-let [user (authorize-session session)]
           (wrap-json-response (fn [req] (response (user->data db user))))
           (response (str "Get outa here. You are not authorized for this action."))))
   (GET "/signup" [] (file-response "resources/public/signup.html"))
@@ -101,3 +92,16 @@
 
 (def app
   (handler/site app-routes))
+
+(comment
+  (get-datum (UserFileStore. "db/users.edn") :Gideon)
+  (assoc-datum! (UserFileStore. "db/users.edn") :Gideon {:user :NOTGIDEON :pswd :is :attr :cool}))
+
+(comment
+  (def salt "$2a$10$hsHJUanslb0LVSc3kRL.8OBVoYp/RHzvVPo9tSPyiHT/ZLYn0aXuS")
+  ;; user-salted
+  (encrypt salt "gideon@foo.bar")
+  "$2a$10$hsHJUanslb0LVSc3kRL.8OJeyyO2sbRafkih.rewWVRzoG8oDptee"
+  ;; password
+  (encrypt salt "foobar")
+  "$2a$10$hsHJUanslb0LVSc3kRL.8OXXfVSfooC4PqG0ICZA/HN/0nzKGTxjG")
