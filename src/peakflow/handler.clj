@@ -74,7 +74,9 @@
          (response "Get outa here.")))
   (POST "/home/data" {session :session params :params}
         (if-let [user (authorize-session session)]
-          (wrap-json-response (fn [req] (response (save-peakflow! db user (select-keys params [:peakflow])))))
+          (wrap-json-response (fn [req] (wrap-session
+                                          (response (save-peakflow! db user (select-keys params [:timestamp :peakflow])))
+                                          session)))
           (response (str "Get outa here. You are not authorized for this action."))))
   (GET "/home/data" {session :session params :params}
         (if-let [user (authorize-session session)]
