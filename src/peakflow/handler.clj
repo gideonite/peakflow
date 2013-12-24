@@ -70,9 +70,8 @@
   (user->data [this user]
     (get-datum peakflows (user :username))))
 
-;; {:username :salty-password :salt :salty-username}
-(def users (KVFileStore. "db/users"))
-(def peakflows (KVFileStore. "db/peakflows"))
+(def users (KVFileStore. "db/users"))             ;; {:username :salty-password :salt :salty-username}
+(def peakflows (KVFileStore. "db/peakflows"))     ;; {:username (seq of {:peakflow number :timestamp :location})}
 (def db (FileDB. users peakflows))
 
 (defroutes app-routes
@@ -84,7 +83,7 @@
          (response "Get outa here.")))
   (POST "/home/data" {session :session params :params}
         (if-let [user (authorize db (session :user-id))]
-          (wrap-json-response (fn [req] (response (save-peakflow! db user (params :peakflow)))))
+          (wrap-json-response (fn [req] (response (save-peakflow! db user (select-keys params [:peakflow])))))
           (response (str "Get outa here. You are not authorized for this action."))))
   (GET "/home/data" {session :session params :params}
         (if-let [user (authorize db (session :user-id))]
