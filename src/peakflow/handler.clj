@@ -68,13 +68,6 @@
 (def peakflows (KVFileStore. "db/peakflows"))
 (def db (FileDB. users peakflows))
 
-(defn handler
-  [request]
-  (let [authorized? (get-datum users ((request :session) :user-id))]
-    (if authorized?
-      (response "You must be a friend.")
-      (response "Get outa here."))))
-
 (defroutes app-routes
   (GET "/" [] (file-response "resources/public/landing.html"))
   (GET "/foobar" {session :session}
@@ -93,4 +86,4 @@
   (route/not-found "Not Found"))
 
 (def app
-  (handler/site app-routes [{:session handler}]))
+  (handler/site app-routes))
