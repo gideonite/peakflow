@@ -3,15 +3,15 @@
             [compojure.handler :as handler]
             [compojure.route :as route]
             [noir.util.crypt :refer [encrypt]]
-            [ring.middleware.session :refer [wrap-session]]
+            [ring.middleware.json :refer [wrap-json-response]]
             [ring.util.response :refer [file-response redirect response]]))
 
 (defprotocol IDatabase
   (authorize [this username password] [this user-id])
-  (save-user! [this username password])
-  (delete-user! [this username])
-  (datum! [this username peakflow])
-  (user-data [this store username]))
+  (save-user! [this user password])
+  (delete-user! [this user])
+  (save-peakflow! [this user peakflow])
+  (user->data [this user]))
 
 (defprotocol IKVStore
   (assoc-datum! [this key value] "Adds the record to the store.")
@@ -61,7 +61,14 @@
         (:salty-username user))
       nil))
   (authorize [this user-id]
-    (get-datum users user-id)))
+    (get-datum users user-id))
+  (save-peakflow! [this user peakflow]
+    (let [username (user :username)
+          data (get-datum peakflows username)]
+      (assoc-datum! peakflows username (conj data peakflow))
+      peakflow))
+  (user->data [this user]
+    (get-datum peakflows (user :username))))
 
 ;; {:username :salty-password :salt :salty-username}
 (def users (KVFileStore. "db/users"))
@@ -70,17 +77,25 @@
 
 (defroutes app-routes
   (GET "/" [] (file-response "resources/public/landing.html"))
-  (GET "/foobar" {session :session}
-       (if (get-datum users (session :user-id))
-         (-> (response "You must be a friend.")
+  (GET "/home" {session :session}
+       (if (authorize db (session :user-id))
+         (-> (file-response "resources/public/home.html")
            (assoc :session session))
          (response "Get outa here.")))
+  (POST "/home/data" {session :session params :params}
+        (if-let [user (authorize db (session :user-id))]
+          (wrap-json-response (fn [req] (response (save-peakflow! db user (params :peakflow)))))
+          (response (str "Get outa here. You are not authorized for this action."))))
+  (GET "/home/data" {session :session params :params}
+        (if-let [user (authorize db (session :user-id))]
+          (wrap-json-response (fn [req] (response (user->data db user))))
+          (response (str "Get outa here. You are not authorized for this action."))))
   (GET "/signup" [] (file-response "resources/public/signup.html"))
   (POST "/signup" [username]
         (response "NICE TRY BUCKO!"))
   (POST "/auth" [username password]
         (if-let [user-id (authorize db username password)]
-          (-> (redirect "/foobar")
+          (-> (redirect "/home")
             (assoc :session {:user-id user-id}))
           "You don't exist. Sorry."))
   (route/not-found "Not Found"))
