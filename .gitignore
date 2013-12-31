@@ -9,8 +9,3 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 *.swp
-.gradle
-/local.properties
-/.idea/workspace.xml
-.DS_Store
-.idea
