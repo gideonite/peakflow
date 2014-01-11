@@ -40,6 +40,21 @@
     (let [data (slurp-edn filename)]
       (spit-edn filename (dissoc data key)))))
 
+(defrecord User [username password user-salt pass-salt encrypted-username])
+
+(defn create-user [username password]
+  "Returns a new user record given a username and password. By 'new' I mean
+  that it creates new salts."
+  (let [user-salt (gen-salt)
+        pass-salt (gen-salt)
+        encrypted-username (encrypt user-salt username)
+        encrypted-password (encrypt pass-salt password)]
+    (->User username
+            encrypted-password
+            user-salt
+            pass-salt
+            encrypted-username)))
+
 (deftype FileDB
   [users peakflows]
   IDatabase
@@ -54,18 +69,10 @@
   (create-user! [this username password]
     (if (get-datum users username)
       (str "User '" username  "' exists")
-      (let [user-salt (gen-salt)
-            pass-salt (gen-salt)
-            encrypted-username (encrypt user-salt username)
-            encrypted-password (encrypt pass-salt password)
-            user-record {:username username
-                         :user-salt user-salt
-                         :pass-salt pass-salt
-                         :encrypted-username encrypted-username
-                         :password encrypted-password}]
-        (assoc-datum! users encrypted-username user-record)
-        (assoc-datum! users username user-record)
-        user-record)))
+      (let [user (create-user username password)]
+        (assoc-datum! users (:encrypted-username user) user)
+        (assoc-datum! users (:username user) user)
+        user)))
   (delete-user! [this username password]
     (println (authorize this username password))
     (if-let [user-id (authorize this username password)]
