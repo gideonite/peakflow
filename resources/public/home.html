@@ -29,6 +29,9 @@
 </body>
 
 <script type="text/javascript">
+
+    var global_data;
+
     $("#peakflow-form").submit(function(e) {
         e.preventDefault();
 
@@ -43,14 +46,15 @@
         var timestamp = (new Date(e.timeStamp)).toISOString();
         var formdata = $(this).serialize();
         formdata += "&timestamp=" + timestamp;
-        $.post("/home/data", formdata, function(data) {
-            console.log(data);
-            return data;
+        $.post("/home/data", formdata, function(datum) {
+            global_data.unshift(datum);
+            table(document.getElementById('peakflows'), global_data);
         });
     });
 
     $(document).ready(function() {
         $.get("/home/data", function(data) {
+            global_data = data;
             table(document.getElementById('peakflows'), data);
         });
     });
