@@ -47,6 +47,8 @@
         var formdata = $(this).serialize();
         formdata += "&timestamp=" + timestamp;
         $.post("/home/data", formdata, function(datum) {
+            $("#new-peakflow-input").val("");    // clear input box
+
             global_data.unshift(datum);
             table(document.getElementById('peakflows'), global_data);
         });
