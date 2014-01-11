@@ -33,6 +33,10 @@
   (GET "/signup" [] (file-response "resources/public/signup.html"))
   (POST "/signup" [username]
         (response "NICE TRY BUCKO!"))
+  (POST "/new-user" [username password]
+        (let [user-record (create-user! db username password)]
+          (-> (redirect "/home")
+            (assoc :session {:user-id (:encrypted-username user-record)}))))
   (POST "/auth" [username password]
         (if-let [user-id (authorize db username password)]
           (-> (redirect "/home")
@@ -42,16 +46,3 @@
 
 (def app
   (handler/site app-routes))
-
-(comment
-  (get-datum (UserFileStore. "db/users.edn") :Gideon)
-  (assoc-datum! (UserFileStore. "db/users.edn") :Gideon {:user :NOTGIDEON :pswd :is :attr :cool}))
-
-(comment
-  (def salt "$2a$10$hsHJUanslb0LVSc3kRL.8OBVoYp/RHzvVPo9tSPyiHT/ZLYn0aXuS")
-  ;; user-salted
-  (encrypt salt "gideon@foo.bar")
-  "$2a$10$hsHJUanslb0LVSc3kRL.8OJeyyO2sbRafkih.rewWVRzoG8oDptee"
-  ;; password
-  (encrypt salt "foobar")
-  "$2a$10$hsHJUanslb0LVSc3kRL.8OXXfVSfooC4PqG0ICZA/HN/0nzKGTxjG")

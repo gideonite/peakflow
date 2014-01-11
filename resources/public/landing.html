@@ -16,6 +16,8 @@
     <p>Welcome to PeakFlow, home of the PeakFlow. Can I take your
     order?</p>
 
+    <h4>Log In</h4>
+
     <form action="auth" method="POST">
         Username: <input type="text" name="username"> <br />
         Password: <input type="password" name="password"> <br />
@@ -23,6 +25,17 @@
         <input type="submit" value="login">
         <br />
     </form>
+
+    <h4>New to Peakflow? Sign up here!</h4>
+
+    <form action="new-user" method="POST">
+        Username: <input type="text" name="username"> <br />
+        Password: <input type="password" name="password"> <br />
+        <br />
+        <input type="submit" value="Sign up">
+        <br />
+    </form>
+
 
 </body>
 </html>

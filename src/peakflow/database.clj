@@ -58,7 +58,8 @@
                          :encrypted-username encrypted-username
                          :password encrypted-password}]
         (assoc-datum! users encrypted-username user-record)
-        (assoc-datum! users username user-record))))
+        (assoc-datum! users username user-record)))
+    user-record)
   (delete-user! [this username password]
     (println (authorize this username password))
     (if-let [user-id (authorize this username password)]
