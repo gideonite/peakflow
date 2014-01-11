@@ -47,7 +47,7 @@
     (if-let [user (get-datum users username)]
       (if (= (user :password)
              (encrypt (user :pass-salt) password))
-        (:user-salt user))
+        (:encrypted-username user))
       nil))
   (authorize [this user-id]
     (get-datum users user-id))
