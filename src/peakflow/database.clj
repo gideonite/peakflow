@@ -1,5 +1,6 @@
 (ns peakflow.database
-  (:require [noir.util.crypt :refer [encrypt gen-salt]]))
+  (:require [clojure.pprint :refer [pprint]]
+            [noir.util.crypt :refer [encrypt gen-salt]]))
 
 (defprotocol IDatabase
   (authorize [this username password] [this user-id])
@@ -20,19 +21,24 @@
       {}
       (read-string data))))
 
+(defn spit-edn
+  [filename data]
+  (spit filename
+        (with-out-str (pprint data))))
+
 (deftype KVFileStore
   [filename]
   IKVStore
   (assoc-datum! [this key value]
     (let [data (slurp-edn filename)]
-      (spit filename
+      (spit-edn filename
             (assoc data key value))))
   (get-datum [this key]
     (let [data (slurp-edn filename)]
       (get data key)))
   (dissoc-datum! [this key]
     (let [data (slurp-edn filename)]
-      (spit filename (dissoc data key)))))
+      (spit-edn filename (dissoc data key)))))
 
 (deftype FileDB
   [users peakflows]
@@ -58,8 +64,8 @@
                          :encrypted-username encrypted-username
                          :password encrypted-password}]
         (assoc-datum! users encrypted-username user-record)
-        (assoc-datum! users username user-record)))
-    user-record)
+        (assoc-datum! users username user-record)
+        user-record)))
   (delete-user! [this username password]
     (println (authorize this username password))
     (if-let [user-id (authorize this username password)]
