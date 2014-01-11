@@ -1,62 +1,10 @@
 (ns peakflow.handler
-  (:require [compojure.core :refer :all]
+  (:require [peakflow.database :refer :all]
+            [compojure.core :refer :all]
             [compojure.handler :as handler]
             [compojure.route :as route]
-            [noir.util.crypt :refer [encrypt]]
             [ring.middleware.json :refer [wrap-json-response]]
             [ring.util.response :refer [file-response redirect response]]))
-
-(defprotocol IDatabase
-  (authorize [this username password] [this user-id])
-  (save-user! [this user password])
-  (delete-user! [this user])
-  (save-peakflow! [this user peakflow])
-  (user->data [this user]))
-
-(defprotocol IKVStore
-  (assoc-datum! [this key value] "Adds the record to the store.")
-  (get-datum [this key] "Gets a record based on the key."))
-
-(defn slurp-edn
-  [filename]
-  (let [data (slurp filename)]
-    (if (= "" data)
-      {}
-      (read-string data))))
-
-(deftype KVFileStore
-  [filename]
-  IKVStore
-  (assoc-datum! [this key value]
-    (let [data (slurp-edn filename)]
-      (spit filename
-            (assoc data key value))))
-  (get-datum [this key]
-    (let [data (slurp-edn filename)]
-      (get data key))))
-
-(deftype FileDB
-  [users peakflows]
-  IDatabase
-  (authorize [this username password]
-    (if-let [user (get-datum users username)]
-      (if (= (user :salty-password)
-             (encrypt (user :salt) password))
-        (:salty-username user))
-      nil))
-  (authorize [this user-id]
-    (get-datum users user-id))
-  (save-peakflow! [this user peakflow]
-    (let [username (user :username)
-          data (get-datum peakflows username)]
-      (assoc-datum! peakflows username (conj data peakflow))
-      peakflow))
-  (user->data [this user]
-    (get-datum peakflows (user :username))))
-
-(def users (KVFileStore. "db/users"))             ;; {:username :salty-password :salt :salty-username}
-(def peakflows (KVFileStore. "db/peakflows"))     ;; {:username (seq of {:peakflow :timestamp :location})}
-(def db (FileDB. users peakflows))
 
 (defn authorize-session
   [session]
