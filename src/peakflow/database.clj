@@ -1,20 +1,8 @@
-(ns peakflow.database
-  (:require [clojure.pprint :refer [pprint]]
+(ns peakflow.database (:require [clojure.pprint :refer [pprint]]
             [noir.util.crypt :refer [encrypt gen-salt]]))
 
-(defprotocol IDatabase
-  (authorize [this username password] [this user-id])
-  (create-user! [this user password])
-  (delete-user! [this user password])
-  (save-peakflow! [this user peakflow])
-  (user->data [this user]))
-
-(defprotocol IKVStore
-  (assoc-datum! [this key value] "Adds the record to the store.")
-  (get-datum [this key] "Gets a record based on the key.")
-  (dissoc-datum! [this key] "Removes the record associated with the key."))
-
 (defn slurp-edn
+  "filename (string) -> Clojure data structure."
   [filename]
   (let [data (slurp filename)]
     (if (= "" data)
@@ -22,23 +10,108 @@
       (read-string data))))
 
 (defn spit-edn
+  "filename  data -> nil.
+  Puts the data into the file, overwriting anything in the file."
   [filename data]
   (spit filename
         (with-out-str (pprint data))))
 
-(deftype KVFileStore
-  [filename]
-  IKVStore
-  (assoc-datum! [this key value]
-    (let [data (slurp-edn filename)]
-      (spit-edn filename
-            (assoc data key value))))
-  (get-datum [this key]
-    (let [data (slurp-edn filename)]
-      (get data key)))
-  (dissoc-datum! [this key]
-    (let [data (slurp-edn filename)]
-      (spit-edn filename (dissoc data key)))))
+(defprotocol IStoreKV
+  (put-value [this k v])
+  (spit-data [this data])
+  (get-value [this k]))
+
+(defrecord FileStore [filename])
+
+(defn file-store []
+  (->FileStore "db/db.edn"))
+
+(extend-type FileStore
+  IStoreKV
+  (get-value [this k]
+             (get (slurp-edn (:filename this)) k))
+  (spit-data [this data] (spit-edn (:filename this) data))
+  (put-value [this k v] (spit-edn (:filename this)
+                                (assoc (slurp-edn (:filename this)) k v))))
+
+(comment
+  (def store (file-store))
+  (get-value store :foo)
+  (put-value store :foo :bar)
+  (get-value store :foo))
+
+(defrecord CachedFileStore [filestore !cache])
+
+(defn cached-file-store []
+  (->CachedFileStore (file-store) (atom {})))
+
+#_(cached-file-store)
+
+(extend-type CachedFileStore
+  IStoreKV
+  (get-value [this k]
+         (if-let [value (get @(:!cache this) k)]
+           value
+           (if-let [file-value (get-value (:filestore this) k)]
+             file-value
+             nil)))
+  (put-value [this k v]
+         (swap! (:!cache this) assoc k v)
+         (spit-data (:filestore this) @(:!cache this))))
+
+(comment
+  (def store (cached-file-store))
+
+  (get-value store :foo)
+
+  (put-value store :foo :bar)
+  (get-value store :foo)
+
+  (put-value store :foo :baz)
+  (get-value store :foo))
+
+(defrecord FileDB [store])
+
+(defn file-db []
+  (->FileDB (cached-file-store)))
+
+(defprotocol IDatabase
+  (lookup-user [this userid])
+  (authorize [this username password])
+  (save-user! [this user])
+  (delete-user! [this user])
+  (save-peakflow! [this user peakflow])
+  (get-peakflows [this user]))
+
+(extend-type FileDB
+  IDatabase
+  (lookup-user [this userid] (get-value (:store this) userid))
+  (save-user! [this user]
+              (if-not (lookup-user this (:username user))
+                (do (put-value (:store this) (:username user) user)
+                    (put-value (:store this) (:encrypted-username user) user)
+                  true)
+                false))
+  (delete-user! [this user]
+                (put-value (:store this) (:username user) nil)
+                (put-value (:store this) (:encrypted-username user) nil))
+  (authorize [this username password]
+             (if-let [user (lookup-user this username)]
+               (= (:password user)
+                  (encrypt (:pass-salt user) password))
+               false))
+  (save-peakflow! [this userid peakflow]
+                  (if-let [user (lookup-user this userid)]
+                    (do
+                      (put-value (:store this)
+                               (:username user)
+                               (assoc user :peakflows
+                                 (conj (get user :peakflows [])
+                                            peakflow))) true)
+                    false))
+  (get-peakflows [this userid]
+                 (if-let [user (lookup-user this userid)]
+                   (:peakflows user))))
 
 (defrecord User [username password user-salt pass-salt encrypted-username])
 
@@ -55,39 +128,22 @@
             pass-salt
             encrypted-username)))
 
-(deftype FileDB
-  [users peakflows]
-  IDatabase
-  (authorize [this username password]
-    (if-let [user (get-datum users username)]
-      (if (= (user :password)
-             (encrypt (user :pass-salt) password))
-        (:encrypted-username user))
-      nil))
-  (authorize [this user-id]
-    (get-datum users user-id))
-  (create-user! [this username password]
-    (if (get-datum users username)
-      (str "User '" username  "' exists")
-      (let [user (create-user username password)]
-        (assoc-datum! users (:encrypted-username user) user)
-        (assoc-datum! users (:username user) user)
-        user)))
-  (delete-user! [this username password]
-    (println (authorize this username password))
-    (if-let [user-id (authorize this username password)]
-      (let [user-record (get-datum users username)]
-        (dissoc-datum! users (:encrypted-username user-record))
-        (dissoc-datum! users username))
-      "Sorry, you are unauthorized."))
-  (save-peakflow! [this user peakflow]
-    (let [username (user :username)
-          data (get-datum peakflows username)]
-      (assoc-datum! peakflows username (conj data peakflow))
-      peakflow))
-  (user->data [this user]
-    (get-datum peakflows (user :username))))
+(comment
+  (def db (file-db))
+  (def me (create-user "Gideon" "foobar"))
+  (save-user! db me)
+  (lookup-user db (:encrypted-username (lookup-user db "Gideon")))
+  (authorize db "Gideon" "foobar")
+  (save-peakflow! db "Gideon" :peakflow1)
+  (save-peakflow! db "Gideon" :peakflow2)
+  (save-peakflow! db me :peakflow3)
+  (delete-user! db me))
 
-(def users (KVFileStore. "db/users"))
-(def peakflows (KVFileStore. "db/peakflows"))
-(def db (FileDB. users peakflows))
+(defrecord Peakflow [timestamp value])
+
+(def db (file-db))
+
+(defn save-user [user]
+  (save-user! db user))
+
+(save-user (create-user "asdf" "fdsa"))
