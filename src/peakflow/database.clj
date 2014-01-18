@@ -54,6 +54,7 @@
 (extend-type CachedFileStore
   IStoreKV
   (get-value [this k]
+         (spit-data (slurp-edn ))
          (if-let [value (get @(:!cache this) k)]
            value
            (if-let [file-value (get-value (:filestore this) k)]
@@ -119,7 +120,7 @@
                     false))
   (get-peakflows-db [this userid]
                  (if-let [user (lookup-user-db this userid)]
-                   (:peakflows user))))
+                   (:peakflows (lookup-user-db this (:username user))))))
 
 ;;
 ;; USER AND PEAKFLOW RECORD TYPES
@@ -140,8 +141,10 @@
             pass-salt
             encrypted-username)))
 
-(defrecord Peakflow [timestamp value])
-(defn create-peakflow [timestamp value] (->Peakflow timestamp value))
+(defrecord Peakflow [timestamp peakflow])
+(defn create-peakflow
+  ([timestamp peakflow] (->Peakflow timestamp peakflow))
+  ([m] (->Peakflow (:timestamp m) (:peakflow m))))
 
 ;;
 ;; API
@@ -158,6 +161,7 @@
   (lookup-user-db db userid))
 
 (defn authorize
+  "username raw-password -> Boolean."
   [username password]
   (authorize-db db username password))
 
