@@ -1,6 +1,10 @@
 (ns peakflow.database (:require [clojure.pprint :refer [pprint]]
             [noir.util.crypt :refer [encrypt gen-salt]]))
 
+;;
+;; FILE STORE
+;;
+
 (defn slurp-edn
   "filename (string) -> Clojure data structure."
   [filename]
@@ -75,43 +79,51 @@
 (defn file-db []
   (->FileDB (cached-file-store)))
 
+;;
+;; DATABASE INTERFACE AND IMPL
+;;
+
 (defprotocol IDatabase
-  (lookup-user [this userid])
-  (authorize [this username password])
-  (save-user! [this user])
-  (delete-user! [this user])
-  (save-peakflow! [this user peakflow])
-  (get-peakflows [this user]))
+  (lookup-user-db [this userid])
+  (authorize-db [this username password])
+  (save-user!-db [this user])
+  (delete-user!-db [this user])
+  (save-peakflow!-db [this userid peakflow])
+  (get-peakflows-db [this userid]))
 
 (extend-type FileDB
   IDatabase
-  (lookup-user [this userid] (get-value (:store this) userid))
-  (save-user! [this user]
-              (if-not (lookup-user this (:username user))
+  (lookup-user-db [this userid] (get-value (:store this) userid))
+  (save-user!-db [this user]
+              (if-not (lookup-user-db this (:username user))
                 (do (put-value (:store this) (:username user) user)
                     (put-value (:store this) (:encrypted-username user) user)
                   true)
                 false))
-  (delete-user! [this user]
+  (delete-user!-db [this user]
                 (put-value (:store this) (:username user) nil)
                 (put-value (:store this) (:encrypted-username user) nil))
-  (authorize [this username password]
-             (if-let [user (lookup-user this username)]
+  (authorize-db [this username password]
+             (if-let [user (lookup-user-db this username)]
                (= (:password user)
                   (encrypt (:pass-salt user) password))
                false))
-  (save-peakflow! [this userid peakflow]
-                  (if-let [user (lookup-user this userid)]
+  (save-peakflow!-db [this userid peakflow]
+                  (if-let [user (lookup-user-db this userid)]
                     (do
                       (put-value (:store this)
-                               (:username user)
-                               (assoc user :peakflows
-                                 (conj (get user :peakflows [])
-                                            peakflow))) true)
+                                 (:username user)
+                                 (assoc user :peakflows
+                                   (conj (get user :peakflows [])
+                                         peakflow))) true)
                     false))
-  (get-peakflows [this userid]
-                 (if-let [user (lookup-user this userid)]
+  (get-peakflows-db [this userid]
+                 (if-let [user (lookup-user-db this userid)]
                    (:peakflows user))))
+
+;;
+;; USER AND PEAKFLOW RECORD TYPES
+;;
 
 (defrecord User [username password user-salt pass-salt encrypted-username])
 
@@ -128,22 +140,56 @@
             pass-salt
             encrypted-username)))
 
-(comment
-  (def db (file-db))
-  (def me (create-user "Gideon" "foobar"))
-  (save-user! db me)
-  (lookup-user db (:encrypted-username (lookup-user db "Gideon")))
-  (authorize db "Gideon" "foobar")
-  (save-peakflow! db "Gideon" :peakflow1)
-  (save-peakflow! db "Gideon" :peakflow2)
-  (save-peakflow! db me :peakflow3)
-  (delete-user! db me))
-
 (defrecord Peakflow [timestamp value])
+(defn create-peakflow [timestamp value] (->Peakflow timestamp value))
+
+;;
+;; API
+;;
+
+;; The "API" merely factors out the database reference. Presumably,
+;; if you are going to change it in one place, you are going to want
+;; to change it everywhere.
 
 (def db (file-db))
 
-(defn save-user [user]
-  (save-user! db user))
+(defn lookup-user
+  [userid]
+  (lookup-user-db db userid))
 
-(save-user (create-user "asdf" "fdsa"))
+(defn authorize
+  [username password]
+  (authorize-db db username password))
+
+(defn save-user!
+  "User -> Boolean.
+  Returns true if the user was successfully saved.
+  Fails to save if the user already exists."
+  [User]
+  (save-user!-db db User))
+
+(defn save-peakflow!
+  "userid, Peakflow -> Boolean."
+  [userid Peakflow]
+  (save-peakflow!-db db userid Peakflow))
+
+(defn get-peakflows
+  [userid]
+  (get-peakflows-db db userid))
+
+(comment
+  (def db (file-db))
+  (def me (create-user "Gideon" "foobar"))
+  (save-user!-db db me)
+  (lookup-user-db db (:encrypted-username (lookup-user-db db "Gideon")))
+  (authorize-db db "Gideon" "foobar")
+  (save-peakflow!-db db "Gideon" :peakflow1)
+  (save-peakflow!-db db "Gideon" :peakflow2)
+  (save-peakflow!-db db me :peakflow3)
+  (delete-user!-db db me)
+
+  (save-user (create-user "foobaz" "elephant"))
+  (:username (lookup-user "foobaz"))
+  (create-peakflow "11:00AM" 660)
+  (save-peakflow! "foobaz" (create-peakflow "11:00AM" 660))
+  (get-peakflows "foobaz"))
