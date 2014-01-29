@@ -76,9 +76,10 @@
     });
 
     $(document).ready(function() {
-        $.get(//"/home/data"
-              "test-data.json"
+        $.get("/home/data"
+              //"test-data.json"
               ,function(data) {
+            data = data || [];
             global_data = data;
             table(document.getElementById('table'), data);
             xy = xyplot(document.getElementById('plot'), data)

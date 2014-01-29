@@ -1,5 +1,5 @@
 function table(el, data) {
-  if (data === "")
+  if (0 === data.length)
       return;
 
   $el = $(el);

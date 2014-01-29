@@ -1,4 +1,5 @@
 function xyplot(el, data) {
+
     var width = 1200;
     var height = 250;
     var margin = {top: 20, left: 33, bottom: 20, right: 20};
@@ -9,7 +10,9 @@ function xyplot(el, data) {
     svg.attr('width', width+margin.left+margin.right);
     svg.attr('height', height+margin.top+margin.bottom);
 
-    draw();
+    if (0 !== data.length) {
+      draw();
+    }
 
     function draw() {
         var main = svg.append('g');
