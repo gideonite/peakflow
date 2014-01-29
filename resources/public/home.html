@@ -13,13 +13,18 @@
 -->
 
 <style type="text/css">
-  .x-axis path {
-      display: none;
+  .x-axis path, .x-axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
   }
 </style>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.0/d3.min.js"></script>
+
+<script type="text/javascript" src="js/table.js"></script>
+<script type="text/javascript" src="js/xyplot.js"></script>
 
 </head>
 <body>
@@ -66,110 +71,14 @@
     });
 
     $(document).ready(function() {
-        $.get("/home/data", function(data) {
+        $.get(//"/home/data"
+              "test-data.json"
+              ,function(data) {
             global_data = data;
             table(document.getElementById('table'), data);
-            xy = xy_graph(document.getElementById('plot'), data)
+            xy = xyplot(document.getElementById('plot'), data)
         });
     });
-
-    function table(el, data) {
-        if (data === "")
-            return;
-
-        $el = $(el);
-
-        $el.empty();
-
-        $el.attr("cellspacing", 10);
-
-        // table header
-        $header = $('<tr>');
-        $th_peakflow = $('<th>').text("Peakflow");
-        $th_date = $('<th>').text("Date");
-        $th_time = $('<th>').text("Time");
-        $header.append($th_date);
-        $header.append($th_time);
-        $header.append($th_peakflow);
-        $el.append($header);
-
-        // populate the table with data
-        data.forEach(function(d,i) {
-            var time = new Date(d.timestamp);
-            var hours = time.getHours();
-            var mins = time.getMinutes();
-
-            $tr = $('<tr>');
-            $tr.append($('<td>').text(time.toDateString()));
-            $tr.append($('<td>').text(hours + ":" + mins));
-            $tr.append($('<td>').text(d.peakflow)).attr("align", "center");
-
-            $el.append($tr);
-        });
-    };
-
-    function xy_graph(el, data) {
-      var width = 500;
-      var height = 250;
-      var margin = {top: 20, left: 20, bottom: 20, right: 20};
-      var parseDate = d3.time.format("%m/%d/%Y %H:%M:%S").parse;
-
-      $el = d3.select(el);
-      var svg = $el.append('svg');
-      svg.attr('width', width+margin.left+margin.right);
-      svg.attr('height', height+margin.top+margin.bottom);
-      var main = svg.append('g');
-      main.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-
-      draw();
-
-      function draw() {
-          data = data.map(function(d) {
-            return { peakflow: parseInt(d.peakflow), timestamp: new Date(d.timestamp) };
-          });
-
-          data = data.sort(function(x,y) { return x.timestamp < y.timestamp;  });
-
-          var x = d3.time.scale()
-              .domain(d3.extent(data, function(d) { return d.timestamp; }))
-              .range([0, 500]);
-
-          var y = d3.scale.linear()
-              .domain(d3.extent(data, function(d) { return d.peakflow; }))
-              .range([250, 0]);
-
-          main.selectAll('circle').remove();
-
-          main.selectAll('circle')
-          .data(data)
-          .enter()
-          .append('circle')
-          .attr('cx', function(d) { return x(d.timestamp) - 1.5; })
-          .attr('cy', function(d) { return y(d.peakflow); })
-          .attr('r', 3)
-          .attr('fill', 'blue');
-
-          var xAxis = d3.svg.axis()
-          .scale(x)
-          .orient('bottom');
-
-          svg.append('g')
-          .attr("transform", translate(0, height+margin.top))
-          .attr("class", "x-axis")
-          .call(xAxis);
-      }
-
-      return {
-        append: function(datum) {
-          data.push(datum);
-          draw();
-        }
-      }
-    }
-
-    function translate(x,y) {
-      return "translate(" + x + "," + y + ")";
-    }
 
     function log(x) {
       console.log(x);

@@ -42,6 +42,7 @@
           (-> (redirect "/home")
             (assoc :session {:user-id user-id}))
           "You don't exist. Sorry."))
+  (route/resources "/")
   (route/not-found "Not Found"))
 
 (def app
