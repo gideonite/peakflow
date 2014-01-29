@@ -65,7 +65,6 @@ function xyplot(el, data) {
       return "translate(" + x + "," + y + ")";
     }
 
-
     return {
       append: function(datum) {
         svg.selectAll('g').remove();
