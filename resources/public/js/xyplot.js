@@ -3,6 +3,7 @@ function xyplot(el, data) {
   var height = 250;
   var margin = {top: 20, left: 33, bottom: 20, right: 20};
   var parseDate = d3.time.format("%m/%d/%Y %H:%M:%S").parse;
+  var time_window = 1000 * 60;
 
   $el = d3.select(el);
   var svg = $el.append('svg');
@@ -17,11 +18,59 @@ function xyplot(el, data) {
     var main = svg.append('g');
     main.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
+    //
+    // data munging
+    //
+
     data = data.map(function(d) {
       return { peakflow: parseInt(d.peakflow), timestamp: new Date(d.timestamp) };
     });
 
-    data = data.sort(function(x,y) { return x.timestamp < y.timestamp;  });
+    data = data.sort(function(x,y) { return x.timestamp < y.timestamp ? -1 : 1; });
+
+    // group peakflows within a certain `time_window` of each other
+    groups = [];
+    var i = 1;
+    while (i < data.length) {
+      var flag = true;
+      var group = [data[i-1]];
+      while (flag && (i < data.length)) {
+        if ( (data[i].timestamp - data[i-1].timestamp) < time_window) {
+          group.push(data[i]);
+        } else {
+          flag = false;
+          groups.push(group);
+        }
+        i++;
+      }
+    }
+
+    // calculate the average peakflow for each group
+    groups = groups.map(function(group) {
+      var total_peakflow = group.reduce(function(x,y) {
+        return x.peakflow + y.peakflow;
+      });
+
+      var avg_peakflow = total_peakflow / group.length;
+
+      console.log(avg_peakflow);
+
+      return group.map(function(d) {
+        d.avg_peakflow = avg_peakflow;
+        return d;
+      });
+    });
+
+    // flatten the list of groups into a list of data
+    var tmp = [];
+    groups.forEach(function(g) {
+      g.forEach(function(d) {
+        tmp.push(d);
+      });
+    });
+
+    data = tmp;
+    foo = data;
 
     var x = d3.time.scale()
         .domain(d3.extent(data, function(d) { return d.timestamp; }))
@@ -38,7 +87,7 @@ function xyplot(el, data) {
     .enter()
     .append('circle')
     .attr('cx', function(d) { return x(d.timestamp); })
-    .attr('cy', function(d) { return y(d.peakflow); })
+    .attr('cy', function(d) { return y(d.avg_peakflow); })
     .attr('r', 3)
     .attr('fill', 'blue');
 
@@ -54,8 +103,8 @@ function xyplot(el, data) {
       .call(xAxis);
 
     var yAxis = d3.svg.axis()
-    .scale(y)
-    .orient('left')
+      .scale(y)
+      .orient('left')
 
     svg.append('g')
       .attr("class", "x-axis")

@@ -12,8 +12,10 @@
 </style>
 -->
 
-<link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css"/>
 
+<script type='text/javascript' id='lt_ws' src='http://localhost:49121/socket.io/lighttable/ws.js'></script>
+
+<link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css"/>
 <style type="text/css">
   .x-axis path, .x-axis line {
     fill: none;
@@ -22,8 +24,12 @@
   }
 </style>
 
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script>
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.0/d3.min.js"></script>
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script> -->
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.0/d3.min.js"></script> -->
+
+<script type="text/javascript" src="js/lib/jquery.min.js"></script>
+<script type="text/javascript" src="js/lib/d3.min.js"></script>
+
 <!-- <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script> -->
 
 <script type="text/javascript" src="js/table.js"></script>
@@ -76,11 +82,12 @@
     });
 
     $(document).ready(function() {
-        $.get("/home/data"
-              //"test-data.json"
+        $.get(//"/home/data"
+              "test-data.json"
               ,function(data) {
             data = data || [];
             global_data = data;
+
             table(document.getElementById('table'), data);
             xy = xyplot(document.getElementById('plot'), data)
         });
@@ -89,6 +96,5 @@
     function log(x) {
       console.log(x);
     }
-
 </script>
 </html>
