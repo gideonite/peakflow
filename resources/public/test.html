@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>PEAKFLOW CHARTS</title>
+
+<!--
+<link rel="stylesheet" type="text/css" href="FIXME" />
+<script type="text/javascript" src="FIXME"></script>
+<style type="text/css">
+/* <![CDATA[ */
+/* ]]> */
+</style>
+-->
+
+
+<script type='text/javascript' id='lt_ws' src='http://localhost:49121/socket.io/lighttable/ws.js'></script>
+
+<link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css"/>
+<style type="text/css">
+  .x-axis path, .x-axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+</style>
+
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script> -->
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.0/d3.min.js"></script> -->
+
+<script type="text/javascript" src="js/lib/jquery.min.js"></script>
+<script type="text/javascript" src="js/lib/d3.min.js"></script>
+
+<!-- <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script> -->
+
+<script type="text/javascript" src="js/table.js"></script>
+<script type="text/javascript" src="js/xyplot.js"></script>
+
+</head>
+<body>
+  <div id="container" style="width:500px; margin-left:50px; margin-top:25px;">
+    <h1>Peakflow Charts</h1>
+    <div id="plot"></div>
+    <table class="table-responsive">
+        <table id="table" class="table" style="overflow=auto; height=50px;"></table>
+    </table>
+  </div>
+</body>
+
+<script type="text/javascript">
+
+    $(document).ready(function() {
+        $.get("/test-data.json", function(data) {
+            data = data || [];
+            global_data = data;
+
+            table(document.getElementById('table'), data);
+            xy = xyplot(document.getElementById('plot'), data)
+        });
+    });
+
+    function log(x) {
+      console.log(x);
+    }
+</script>
+</html>
