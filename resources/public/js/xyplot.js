@@ -3,7 +3,10 @@ function xyplot(el, data) {
   var height = 250;
   var margin = {top: 20, left: 33, bottom: 20, right: 20};
   var parseDate = d3.time.format("%m/%d/%Y %H:%M:%S").parse;
-  var time_window = 1000 * 60;
+  var five_minutes = 1000 * 60 * 5;
+  var one_day = 1000 * 60 * 60 * 24;
+  var one_week = one_day * 7;
+  var time_window = one_week;
 
   $el = d3.select(el);
   var svg = $el.append('svg');
@@ -28,32 +31,27 @@ function xyplot(el, data) {
 
     data = data.sort(function(x,y) { return x.timestamp < y.timestamp ? -1 : 1; });
 
+    function first(l) { return l[0]; }
+    function last(l) { return l[l.length-1]; }
+
     // group peakflows within a certain `time_window` of each other
-    groups = [];
-    var i = 1;
-    while (i < data.length) {
-      var flag = true;
-      var group = [data[i-1]];
-      while (flag && (i < data.length)) {
-        if ( (data[i].timestamp - data[i-1].timestamp) < time_window) {
-          group.push(data[i]);
-        } else {
-          flag = false;
-          groups.push(group);
-        }
-        i++;
+    groups = data.slice(1).reduce(function(acc, curr) {
+      var last_group = last(acc);
+
+      if (last(last_group).timestamp
+          - first(last_group).timestamp < time_window) {
+        last_group.push(curr);
+      } else {
+        acc.push([curr]);
       }
-    }
+
+      return acc;
+    }, [[data[0]]]);
 
     // calculate the average peakflow for each group
     groups = groups.map(function(group) {
-      var total_peakflow = group.reduce(function(x,y) {
-        return x.peakflow + y.peakflow;
-      });
-
+      var total_peakflow = d3.sum(group.map(function(d) { return d.peakflow; }));
       var avg_peakflow = total_peakflow / group.length;
-
-      console.log(avg_peakflow);
 
       return group.map(function(d) {
         d.avg_peakflow = avg_peakflow;
@@ -68,9 +66,7 @@ function xyplot(el, data) {
         tmp.push(d);
       });
     });
-
     data = tmp;
-    foo = data;
 
     var x = d3.time.scale()
         .domain(d3.extent(data, function(d) { return d.timestamp; }))
