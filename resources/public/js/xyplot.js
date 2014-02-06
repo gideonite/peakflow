@@ -4,9 +4,7 @@ function xyplot(el, data) {
   var margin = {top: 20, left: 33, bottom: 20, right: 20};
   var parseDate = d3.time.format("%m/%d/%Y %H:%M:%S").parse;
   var five_minutes = 1000 * 60 * 5;
-  var one_day = 1000 * 60 * 60 * 24;
-  var one_week = one_day * 7;
-  var time_window = one_week;
+  var time_window = five_minutes;
 
   $el = d3.select(el);
   var svg = $el.append('svg');
@@ -38,8 +36,7 @@ function xyplot(el, data) {
     groups = data.slice(1).reduce(function(acc, curr) {
       var last_group = last(acc);
 
-      if (last(last_group).timestamp
-          - first(last_group).timestamp < time_window) {
+      if (curr.timestamp - first(last_group).timestamp < time_window) {
         last_group.push(curr);
       } else {
         acc.push([curr]);
