@@ -75,14 +75,28 @@ function xyplot(el, data) {
 
     main.selectAll('circle').remove();
 
-    main.selectAll('circle')
-    .data(data)
-    .enter()
-    .append('circle')
-    .attr('cx', function(d) { return x(d.timestamp); })
-    .attr('cy', function(d) { return y(d.avg_peakflow); })
-    .attr('r', 3)
-    .attr('fill', 'blue');
+//     main.selectAll('circle')
+//     .data(data)
+//     .enter()
+//     .append('circle')
+//     .attr('cx', function(d) { return x(d.timestamp); })
+//     .attr('cy', function(d) { return y(d.avg_peakflow); })
+//     .attr('r', 10)
+//     .attr('fill', 'blue')
+//     .attr('opacity', '0.0')
+//     ;
+
+    var line = d3.svg.line()
+    .x(function(d) { return x(d.timestamp); })
+    .y(function(d) { return y(d.avg_peakflow); });
+
+    main.append("path")
+    .datum(data)
+    .attr('fill', 'none')
+    .attr('stroke', 'blue')
+    .attr('stroke-width', '2.0px')
+    .attr('shape-rendering', 'smoothEdges')
+    .attr('d', line);
 
     var xAxis = d3.svg.axis()
       .scale(x)
