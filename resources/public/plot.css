@@ -1,0 +1,19 @@
+#plot #graph {
+    fill: none;
+    stroke: blue;
+    stroke-width: 2.0px;
+    shape-rendering: smoothEdges;
+}
+#plot .x-axis path, #plot .x-axis line {
+    fill: none;
+    shape-rendering: crispEdges;
+}
+
+#plot .x-axis line {
+    stroke: #FFF;
+}
+
+#plot .y-axis path, #plot .y-axis line {
+    fill: none;
+    shape-rendering: crispEdges;
+}

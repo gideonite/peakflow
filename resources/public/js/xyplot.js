@@ -16,9 +16,6 @@ function xyplot(el, data) {
   }
 
   function draw() {
-    var main = svg.append('g');
-    main.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-
     //
     // data munging
     //
@@ -66,57 +63,50 @@ function xyplot(el, data) {
     data = tmp;
 
     var x = d3.time.scale()
-        .domain(d3.extent(data, function(d) { return d.timestamp; }))
-        .range([0, width]);
+      .domain(d3.extent(data, function(d) { return d.timestamp; }))
+      .range([0, width]);
 
     var y = d3.scale.linear()
-        .domain(d3.extent(data, function(d) { return d.peakflow; }))
-        .range([250, 0]);
-
-    main.selectAll('circle').remove();
-
-//     main.selectAll('circle')
-//     .data(data)
-//     .enter()
-//     .append('circle')
-//     .attr('cx', function(d) { return x(d.timestamp); })
-//     .attr('cy', function(d) { return y(d.avg_peakflow); })
-//     .attr('r', 10)
-//     .attr('fill', 'blue')
-//     .attr('opacity', '0.0')
-//     ;
-
-    var line = d3.svg.line()
-    .x(function(d) { return x(d.timestamp); })
-    .y(function(d) { return y(d.avg_peakflow); });
-
-    main.append("path")
-    .datum(data)
-    .attr('fill', 'none')
-    .attr('stroke', 'blue')
-    .attr('stroke-width', '2.0px')
-    .attr('shape-rendering', 'smoothEdges')
-    .attr('d', line);
+      .domain(d3.extent(data, function(d) { return d.peakflow; }))
+      .range([250, 0]);
 
     var xAxis = d3.svg.axis()
       .scale(x)
       .ticks(d3.time.week)
       .tickFormat(d3.time.format("%m/%d"))
+      .innerTickSize(-height)
       .orient('bottom');
+
+    var yAxis = d3.svg.axis()
+      .scale(y)
+      .innerTickSize(-width)
+      .orient('left');
+
+    var main = svg.append('g');
+    main.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+    var background = main.append('rect')
+      .attr('fill', '#ddd')
+      .attr('width', width)
+      .attr('height', height);
+
+    svg.append('g')
+      .attr("class", "y-axis")
+      .attr("transform", translate(margin.left, margin.top))
+      .call(yAxis);
 
     svg.append('g')
       .attr("transform", translate(margin.left, height+margin.top))
       .attr("class", "x-axis")
       .call(xAxis);
 
-    var yAxis = d3.svg.axis()
-      .scale(y)
-      .orient('left')
-
-    svg.append('g')
-      .attr("class", "x-axis")
-      .attr("transform", translate(margin.left, margin.top))
-      .call(yAxis);
+    // the peakflow curve
+    var line = d3.svg.line()
+    .x(function(d) { return x(d.timestamp); })
+    .y(function(d) { return y(d.avg_peakflow); });
+    main.append("path")
+    .datum(data)
+    .attr('id', 'graph')
+    .attr('d', line);
   }
 
   function translate(x,y) {
