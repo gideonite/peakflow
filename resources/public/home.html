@@ -79,9 +79,7 @@
     });
 
     $(document).ready(function() {
-        $.get(//"/home/data"
-              "test-data.json"
-              ,function(data) {
+        $.get("/home/data",function(data) {
             data = data || [];
             global_data = data;
 
