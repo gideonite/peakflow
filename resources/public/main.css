@@ -1,0 +1,31 @@
+body {
+    background: url('groovepaper.png');
+}
+
+.heading {
+    min-width: 960px;
+    height: 55px;
+    background-color: grey;
+}
+
+.heading #title {
+    padding-top: 10px;
+    font-weight: bold;
+    font-size: 26px;
+    color: white;
+}
+
+.align-left {
+    margin-left:50px;
+}
+
+.navbar li {
+    display: inline;
+    margin-left:85px;
+    font-weight: bold;
+}
+
+.banner-img {
+    background-color: white;
+    height: 500px;
+}
