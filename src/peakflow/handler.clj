@@ -1,5 +1,6 @@
 (ns peakflow.handler
   (:require [peakflow.database :refer :all]
+            [peakflow.templates :as templates]
             [compojure.core :refer :all]
             [compojure.handler :as handler]
             [compojure.route :as route]
@@ -16,6 +17,7 @@
 
 (defroutes app-routes
   (GET "/" [] (file-response "resources/public/landing.html"))
+  (GET "/foo" [] (response (templates/rendered-landing)))
   (GET "/home" {session :session}
        (if (authorize-session session)
          (wrap-session (file-response "resources/public/home.html") session)
